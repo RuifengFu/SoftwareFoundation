@@ -2,7 +2,7 @@
 
 Set Warnings "-notation-overridden,-parsing".
 From LF Require Export Logic.
-Require Coq.omega.Omega.
+Require Import Lia.
 
 (* ################################################################# *)
 (** * 归纳定义的命题 *)
@@ -130,7 +130,10 @@ Qed.
 Theorem ev_double : forall n,
   ev (double n).
 Proof.
-  (* 请在此处解答 *) Admitted.
+  intros n. induction n as [|n' IHn'].
+  - simpl. apply ev_0.
+  - simpl. apply ev_SS. apply IHn'.
+Qed.
 (** [] *)
 
 (* ################################################################# *)
@@ -282,7 +285,11 @@ Theorem one_not_even' : ~ ev 1.
 Theorem SSSSev__even : forall n,
   ev (S (S (S (S n)))) -> ev n.
 Proof.
-  (* 请在此处解答 *) Admitted.
+  intros n H.
+  inversion H.
+  inversion H1.
+  apply H3.
+Qed.
 (** [] *)
 
 (** **** 练习：1 星, standard (ev5_nonsense) 
@@ -292,7 +299,11 @@ Proof.
 Theorem ev5_nonsense :
   ev 5 -> 2 + 2 = 9.
 Proof.
-  (* 请在此处解答 *) Admitted.
+  intros H.
+  inversion H as [|n H1 eq1].
+  inversion H1 as [|m H2 eq2].
+  inversion H2 as [|o H3 eq3].
+Qed.
 (** [] *)
 
 (** The [inversion] tactic does quite a bit of work. For
@@ -425,7 +436,12 @@ Qed.
 (** **** 练习：2 星, standard (ev_sum)  *)
 Theorem ev_sum : forall n m, ev n -> ev m -> ev (n + m).
 Proof.
-  (* 请在此处解答 *) Admitted.
+  intros n m H1 H2.
+  induction H1 as [|n' H' IH].
+  - simpl. apply H2.
+  - simpl. apply ev_SS. apply IH.
+Qed.
+
 (** [] *)
 
 (** **** 练习：4 星, advanced, optional (ev'_ev) 
@@ -436,14 +452,24 @@ Proof.
 Inductive ev' : nat -> Prop :=
 | ev'_0 : ev' 0
 | ev'_2 : ev' 2
-| ev'_sum n m (Hn : ev' n) (Hm : ev' m) : ev' (n + m).
+| ev'_sum n m (Hn : ev' n) (Hm : ev' m) : ev' (n + m). 
 
 (** 请证明这个定义在逻辑上等同于前述定义。为了精简证明，请使用 [Logic]
     一章中将定理应用到参数的技术，注意同样的技术也可用于归纳定义的命题的构造子。 *)
 
 Theorem ev'_ev : forall n, ev' n <-> ev n.
 Proof.
- (* 请在此处解答 *) Admitted.
+ intros n. split.
+ - intros H. induction H.
+  + apply ev_0.
+  + apply ev_SS. apply ev_0.
+  + apply ev_sum. apply IHev'1. apply IHev'2.
+ - intros H. induction H.
+  + apply ev'_0.
+  + assert (Hplus: S (S n) = 2 + n). { reflexivity. }
+    rewrite Hplus. apply ev'_sum. apply ev'_2. apply IHev.
+Qed.
+
 (** [] *)
 
 (** **** 练习：3 星, advanced, recommended (ev_ev__ev) 
@@ -453,7 +479,13 @@ Proof.
 Theorem ev_ev__ev : forall n m,
   ev (n+m) -> ev n -> ev m.
 Proof.
-  (* 请在此处解答 *) Admitted.
+  intros n m H1 H2.
+  induction H2.
+  - simpl in H1. apply H1.
+  - apply IHev. assert (Hplus: S (S n) = 2 + n). { reflexivity. }
+    rewrite -> Hplus in H1. simpl in H1. apply evSS_ev in H1. apply H1.
+Qed.
+  
 (** [] *)
 
 (** **** 练习：3 星, standard, optional (ev_plus_plus) 
@@ -464,7 +496,19 @@ Proof.
 Theorem ev_plus_plus : forall n m p,
   ev (n+m) -> ev (n+p) -> ev (m+p).
 Proof.
-  (* 请在此处解答 *) Admitted.
+  intros n m p H1 H2.
+  Search ev.
+  assert (Hnmp: ev ((n+m)+(n+p)) ). { apply ev_sum. apply H1. apply H2. }
+  Search double.
+  assert (Hnn: ev (n + n)). { rewrite <- double_plus. apply ev_double. }
+  Search plus.
+  rewrite plus_assoc in Hnmp. rewrite (plus_comm (n+m) n) in Hnmp.
+  Check plus_assoc.
+  rewrite -> (plus_assoc n n m) in Hnmp. 
+  rewrite <- (plus_assoc (n+n) m p) in Hnmp.   
+  apply (ev_ev__ev (n+n) (m+p)). apply Hnmp. apply Hnn.
+Qed.
+
 (** [] *)
 
 (* ################################################################# *)
@@ -538,18 +582,24 @@ Inductive next_ev : nat -> nat -> Prop :=
 (** **** 练习：2 星, standard, optional (total_relation) 
 
     请定一个二元归纳关系 [total_relation] 对每一个自然数的序对成立。 *)
+Inductive  total_relation : nat -> nat -> Prop :=
+  | tr n m: total_relation n m.
 
-(* 请在此处解答
-
-    [] *)
+Theorem test_total_relation :
+  forall (n m: nat), total_relation n m.
+Proof.
+  intros n m. apply tr. Qed.
 
 (** **** 练习：2 星, standard, optional (empty_relation) 
 
     请定一个二元归纳关系 [empty_relation] 对自然数永远为假。 *)
 
-(* 请在此处解答
+Inductive empty_relation : nat -> nat -> Prop := .
 
-    [] *)
+Theorem test_empty_relation :
+  forall (n m: nat), ~ empty_relation n m.
+Proof.
+  intros n m H. inversion H. Qed. 
 
 (** From the definition of [le], we can sketch the behaviors of
     [destruct], [inversion], and [induction] on a hypothesis [H]
@@ -570,40 +620,83 @@ Inductive next_ev : nat -> nat -> Prop :=
 
 Lemma le_trans : forall m n o, m <= n -> n <= o -> m <= o.
 Proof.
-  (* 请在此处解答 *) Admitted.
+  intros m n o H1 H2.
+  induction H2. 
+  - apply H1.
+  - apply le_S. apply IHle.
+Qed. 
 
 Theorem O_le_n : forall n,
   0 <= n.
 Proof.
-  (* 请在此处解答 *) Admitted.
+  intros n.
+  induction n as [|n IH].
+  - apply le_n.
+  - apply le_S. apply IH.
+Qed.
 
 Theorem n_le_m__Sn_le_Sm : forall n m,
   n <= m -> S n <= S m.
 Proof.
-  (* 请在此处解答 *) Admitted.
+  intros n m H1.
+  induction H1.
+  - apply le_n.
+  - apply le_S. apply IHle.
+Qed.
 
 Theorem Sn_le_Sm__n_le_m : forall n m,
   S n <= S m -> n <= m.
 Proof.
-  (* 请在此处解答 *) Admitted.
+    intros n m.
+  generalize dependent n.
+  induction m.
+  - intros n H. inversion H.
+    + apply le_n.
+    + assert (H2: n <= S n). 
+      { apply le_S. apply le_n. }
+      remember (S n) as Sn.
+      apply (le_trans n Sn 0). apply H2. apply H1.
+  - intros n H. inversion H.
+    + apply le_n.
+    + apply IHm in H1. apply le_S. apply H1.
+Qed.
+
 
 Theorem le_plus_l : forall a b,
   a <= a + b.
 Proof.
-  (* 请在此处解答 *) Admitted.
+  intros a b.
+  induction a.
+  - simpl. apply O_le_n.
+  - rewrite plus_Sn_m. apply n_le_m__Sn_le_Sm. apply IHa.
+Qed.
 
 Theorem plus_le : forall n1 n2 m,
   n1 + n2 <= m ->
   n1 <= m /\ n2 <= m.
 Proof.
- (* 请在此处解答 *) Admitted.
+  intros n1 n2 m H.
+  split.
+  - apply (le_trans n1 (n1 + n2) m). 
+    apply le_plus_l.
+    apply H.
+  - apply (le_trans n2 (n2 + n1) m).
+    apply le_plus_l.
+    rewrite plus_comm.
+    apply H.
+Qed.
 
 (** Hint: the next one may be easiest to prove by induction on [n]. *)
 
 Theorem add_le_cases : forall n m p q,
     n + m <= p + q -> n <= p \/ m <= q.
 Proof.
-(* 请在此处解答 *) Admitted.
+  intros n. induction n.
+  - intros m p q H. left. apply O_le_n.
+  - intros m p q H. rewrite plus_Sn_m in H.
+    rewrite plus_n_Sm in H. apply IHn in H. 
+    destruct H.
+    +  
 
 Theorem lt_S : forall n m,
   n < m ->
