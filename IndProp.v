@@ -693,27 +693,52 @@ Theorem add_le_cases : forall n m p q,
 Proof.
   intros n. induction n.
   - intros m p q H. left. apply O_le_n.
-  - intros m p q H. rewrite plus_Sn_m in H.
-    rewrite plus_n_Sm in H. apply IHn in H. 
-    destruct H.
-    +  
+  - intros m p q H.  destruct p. 
+    + right. apply plus_le in H. simpl in H.  apply H. 
+    + rewrite plus_Sn_m in H. rewrite plus_Sn_m in H.
+      apply Sn_le_Sm__n_le_m in H.  apply IHn in H.
+      destruct H.
+      -- left. apply n_le_m__Sn_le_Sm. apply H.
+      -- right. apply H. 
+Qed.
 
 Theorem lt_S : forall n m,
   n < m ->
   n < S m.
 Proof.
-  (* 请在此处解答 *) Admitted.
+  intros n m. intros H. apply le_S. apply H.
+Qed.
 
 Theorem plus_lt : forall n1 n2 m,
   n1 + n2 < m ->
   n1 < m /\ n2 < m.
 Proof.
-(* 请在此处解答 *) Admitted.
+  intros n1 n2 m. intros H. split.
+  - apply (le_trans (S n1) (S(n1 + n2)) m).
+    + apply n_le_m__Sn_le_Sm. apply le_plus_l.
+    + apply H.
+  - apply (le_trans (S n2) (S(n2 + n1)) m).
+    + apply n_le_m__Sn_le_Sm. apply le_plus_l.
+    + rewrite plus_comm.
+      apply H.
+Qed.
 
 Theorem leb_complete : forall n m,
   n <=? m = true -> n <= m.
 Proof.
-  (* 请在此处解答 *) Admitted.
+  intros n m.                         (* Introduce variables n and m *)
+  generalize dependent n.              (* Generalize over n, allowing induction on m *)
+  induction m as [| m' IHm'].         (* Induction on m *)
+  - intros n H. simpl in H.           (* Case m = 0, simplify `n <=? 0` in hypothesis H *)
+    destruct n as [| n'].             (* Case analysis on n *)
+    + apply le_n.                     (* Case n = 0, apply reflexivity of <= *)
+    + discriminate H.                 (* Case S n', H cannot be true, so we can discriminate *)
+  - intros [|n'] H; simpl in H.       (* Case S m', simplify `n <=? S m'` in hypothesis H *)
+    + apply le_0_n.                   (* Case n = 0, 0 is always less than S m' *)
+    + apply le_n_S.                   (* Case S n', apply the induction hypothesis *)
+      apply IHm'.                     (* Use the induction hypothesis on m' *)
+      apply H.                        (* We know `S n' <=? m' = true` from H *)
+Qed.
 
 (** 提示：在下面的问题中，对 [m] 进行归纳会使证明容易一些。*)
 
@@ -721,21 +746,37 @@ Theorem leb_correct : forall n m,
   n <= m ->
   n <=? m = true.
 Proof.
-  (* 请在此处解答 *) Admitted.
+  intros n m.
+  generalize dependent n. 
+  induction m as [|m' IHm'].
+  - intros n H. inversion H. reflexivity.
+  - intros [|n'] H.
+    + reflexivity.
+    + apply Sn_le_Sm__n_le_m in H. apply IHm' in H. simpl. apply H.
+Qed.
 
 (** 提示：以下定理可以不使用 [induction] 而证明。*)
 
 Theorem leb_true_trans : forall n m o,
   n <=? m = true -> m <=? o = true -> n <=? o = true.
 Proof.
-  (* 请在此处解答 *) Admitted.
+  intros n m o H1 H2.
+  apply leb_correct.
+  apply (le_trans n m o).
+  apply leb_complete. apply H1.
+  apply leb_complete. apply H2.
+Qed.
+
 (** [] *)
 
 (** **** 练习：2 星, standard, optional (leb_iff)  *)
 Theorem leb_iff : forall n m,
   n <=? m = true <-> n <= m.
 Proof.
-  (* 请在此处解答 *) Admitted.
+  intros n m.  split.
+  - apply leb_complete.
+  - apply leb_correct.
+Qed.
 (** [] *)
 
 Module R.
